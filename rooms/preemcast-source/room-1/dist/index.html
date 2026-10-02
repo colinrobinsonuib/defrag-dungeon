@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scott or Scot?</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <div class="terminal-box">
+    <div class="terminal-header">
+      <div class="terminal-title">Scott or Scot?</div>
+      <div id="status-badge" class="status-badge">WAITING FOR HOST</div>
+    </div>
+
+    <div id="instruction-text" class="instructions">
+      Waiting for host start signal to begin sector defragmentation...
+    </div>
+
+    <div class="grid" id="grid">
+      <!-- Generated dynamically -->
+    </div>
+
+    <div class="terminal-footer">
+      <span>Errors: <strong id="errors-count">0</strong></span>
+      <button id="give-up-btn" class="give-up-link">Abort Sector</button>
+    </div>
+  </div>
+
+  <script src="./game.js"></script>
+</body>
+</html>

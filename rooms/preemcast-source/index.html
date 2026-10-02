@@ -210,15 +210,30 @@
       log("Sent '{ type: \"defrag:timeout\" }' -> Triggered 5s grace period timeout!");
     }
 
-    // 3. Listen for defrag:complete from the room
+    // 3. Listen for postMessages
     window.addEventListener('message', (event) => {
       const data = event.data;
       if (!data) return;
 
+      // Handle message from parent overworld host
+      if (event.source === window.parent && window.parent !== window) {
+        if (data.type === 'defrag:start') {
+          sendHostStart();
+        } else if (data.type === 'defrag:timeout') {
+          sendHostTimeout();
+        }
+        return;
+      }
+
+      // Handle message from child room iframe
       if (data.type === 'defrag:complete') {
         const status = data.success ? 'VICTORY' : 'DEFEAT';
         log(`Received 'defrag:complete' from Room! Result: [${status}] "${data.result}"`);
-        alert(`DUNGEON OVERWORLD NOTIFICATION:\n\nRoom 1 completed!\nSuccess: ${data.success}\nSummary: ${data.result}`);
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(data, '*');
+        } else {
+          alert(`DUNGEON OVERWORLD NOTIFICATION:\n\nRoom 1 completed!\nSuccess: ${data.success}\nSummary: ${data.result}`);
+        }
       }
     });
   </script>
