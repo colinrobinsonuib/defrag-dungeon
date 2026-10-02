@@ -72,28 +72,77 @@ class BarebonesOverworld {
   }
 
   async loadRooms() {
+    let assembled = [];
     try {
       const res = await fetch('rooms.json', { cache: 'no-cache' });
       if (res.ok) {
-        this.rooms = await res.json();
+        assembled = await res.json();
       }
-    } catch {
-      // Fallback
+    } catch {}
+
+    // Check if rooms.json has assembled rooms from workshop assembler
+    const isAssembledManifest = Array.isArray(assembled) &&
+      assembled.length > 0 &&
+      assembled.some(r => r.path && r.path.startsWith('rooms/'));
+
+    if (isAssembledManifest) {
+      this.rooms = assembled;
+    } else {
+      // Local dev mode: Auto-discover room-1 through room-5 if they exist
+      const discoveredRooms = [];
+      const candidates = ['room-1', 'room-2', 'room-3', 'room-4', 'room-5'];
+
+      await Promise.all(candidates.map(async (cand) => {
+        try {
+          const metaRes = await fetch(`${cand}/dist/room.json`, { cache: 'no-cache' });
+          if (metaRes.ok) {
+            const meta = await metaRes.json();
+            discoveredRooms.push({
+              cand,
+              id: cand,
+              title: meta.title || cand,
+              author: meta.author || 'Participant',
+              color: meta.color || '#3b82f6',
+              description: meta.description || '',
+              path: `${cand}/dist/index.html`
+            });
+            return;
+          }
+          const indexRes = await fetch(`${cand}/dist/index.html`, { cache: 'no-cache', method: 'HEAD' });
+          if (indexRes.ok) {
+            discoveredRooms.push({
+              cand,
+              id: cand,
+              title: cand,
+              author: 'Participant',
+              color: '#3b82f6',
+              description: '',
+              path: `${cand}/dist/index.html`
+            });
+          }
+        } catch {}
+      }));
+
+      discoveredRooms.sort((a, b) => candidates.indexOf(a.cand) - candidates.indexOf(b.cand));
+
+      if (discoveredRooms.length > 0) {
+        this.rooms = discoveredRooms;
+      } else if (Array.isArray(assembled) && assembled.length > 0) {
+        this.rooms = assembled;
+      } else {
+        this.rooms = [
+          {
+            id: 'starter-room',
+            title: 'Sector 07: Memory Matrix',
+            author: 'Ada Lovelace',
+            color: '#e11d48',
+            path: 'room-1/dist/index.html'
+          }
+        ];
+      }
     }
 
-    if (!this.rooms || this.rooms.length === 0) {
-      this.rooms = [
-        {
-          id: 'starter-room',
-          title: 'Sector 07: Memory Matrix',
-          author: 'Ada Lovelace',
-          color: '#e11d48',
-          path: 'room-1/dist/index.html'
-        }
-      ];
-    }
-
-    // Try to refresh live metadata from room.json
+    // Refresh live metadata from room.json
     await Promise.all(this.rooms.map(async (room) => {
       try {
         const metadataUrl = room.path.replace(/index\.html$/, 'room.json');
@@ -103,6 +152,7 @@ class BarebonesOverworld {
           if (meta.title) room.title = meta.title;
           if (meta.author) room.author = meta.author;
           if (meta.color) room.color = meta.color;
+          if (meta.description) room.description = meta.description;
         }
       } catch {}
     }));
