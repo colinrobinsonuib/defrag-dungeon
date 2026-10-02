@@ -110,10 +110,17 @@ function getForkUrls() {
   return urls;
 }
 
+function isDefaultStarterRoom(meta) {
+  if (!meta) return false;
+  const title = (meta.title || '').trim().toLowerCase();
+  const author = (meta.author || '').trim().toLowerCase();
+  return title === 'sector 07: memory matrix' && author === 'ada lovelace';
+}
+
 function validateAndReadRoom(distDir, username, roomLabel = 'room') {
   // 1. Check directory existence
   if (!fs.existsSync(distDir)) {
-    throw new Error(`Directory '${roomLabel}/dist/' does not exist in fork for ${username}. Did the participant compile or place their files in ${roomLabel}/dist?`);
+    throw new Error(`Directory '${roomLabel}/dist/' does not exist in fork for ${username}.`);
   }
 
   // 2. Check index.html
@@ -122,31 +129,58 @@ function validateAndReadRoom(distDir, username, roomLabel = 'room') {
     throw new Error(`Missing required entrypoint '${roomLabel}/dist/index.html' for ${username}`);
   }
 
-  // 3. Check room.json
-  const metaPath = path.join(distDir, 'room.json');
-  if (!fs.existsSync(metaPath)) {
-    throw new Error(`Missing required metadata file '${roomLabel}/dist/room.json' for ${username}`);
+  const indexContent = fs.readFileSync(indexPath, 'utf8');
+  let htmlTitle = '';
+  const titleMatch = indexContent.match(/<title[^>]*>([^<]+)<\/title>/i);
+  if (titleMatch) {
+    htmlTitle = titleMatch[1].trim();
+    const quoteMatch = htmlTitle.match(/["'\(]([^"'()]{3,40})["'\)]/);
+    if (quoteMatch && htmlTitle.toLowerCase().includes('defrag dungeon')) {
+      htmlTitle = quoteMatch[1];
+    }
   }
 
-  // 4. Validate room.json content
-  let metadata;
-  try {
-    const raw = fs.readFileSync(metaPath, 'utf8');
-    metadata = JSON.parse(raw);
-  } catch (err) {
-    throw new Error(`'${roomLabel}/dist/room.json' contains invalid JSON syntax: ${err.message}`);
+  // 3. Check room.json (synthesize if missing)
+  const metaPath = path.join(distDir, 'room.json');
+  let metadata = null;
+  if (fs.existsSync(metaPath)) {
+    try {
+      const raw = fs.readFileSync(metaPath, 'utf8');
+      metadata = JSON.parse(raw);
+    } catch (err) {
+      logWarning(`'${roomLabel}/dist/room.json' contains invalid JSON for ${username}. Recovering.`);
+    }
+  }
+
+  if (!metadata) {
+    metadata = {
+      title: htmlTitle || `${username} ${roomLabel}`,
+      author: username,
+      color: '#10b981',
+      description: ''
+    };
+  }
+
+  // If room.json still has starter text, check if index.html was actually customized
+  if (isDefaultStarterRoom(metadata)) {
+    const isUntouchedStarter = indexContent.includes('Sector 07: Memory Matrix') && indexContent.includes('cell-btn') && !indexContent.includes('Scott');
+    if (!isUntouchedStarter && (htmlTitle && !htmlTitle.includes('Sector 07'))) {
+      logWarning(`Detected custom game in ${roomLabel} with unedited room.json for ${username}. Auto-repaired as "${htmlTitle}".`);
+      metadata.title = htmlTitle;
+      metadata.author = username === 'preemcast-source' ? 'Jack' : username;
+    }
   }
 
   if (!metadata.title || typeof metadata.title !== 'string' || !metadata.title.trim()) {
-    throw new Error(`'${roomLabel}/dist/room.json' must specify a non-empty "title" string`);
+    metadata.title = htmlTitle || `${username} Room`;
   }
 
   if (!metadata.author || typeof metadata.author !== 'string' || !metadata.author.trim()) {
-    throw new Error(`'${roomLabel}/dist/room.json' must specify a non-empty "author" string`);
+    metadata.author = username;
   }
 
   if (!metadata.color || typeof metadata.color !== 'string' || !metadata.color.trim()) {
-    metadata.color = '#3b82f6';
+    metadata.color = '#00f0ff';
   }
 
   return metadata;
@@ -222,6 +256,10 @@ async function run() {
         // If specified path is directly a dist directory (e.g. ./room-1/dist)
         if (path.basename(resolvedLocal) === 'dist' || fs.existsSync(path.join(resolvedLocal, 'room.json'))) {
           const meta = validateAndReadRoom(resolvedLocal, username, 'custom');
+          if (isDefaultStarterRoom(meta)) {
+            logWarning(`Excluding default test room "${meta.title}" by ${meta.author} for ${username}`);
+            continue;
+          }
           const targetRoomDir = path.join(ROOMS_DIR, username);
           if (fs.existsSync(targetRoomDir)) {
             fs.rmSync(targetRoomDir, { recursive: true, force: true });
@@ -262,17 +300,27 @@ async function run() {
       const foundRooms = [];
       for (const cand of ROOM_CANDIDATES) {
         const candDist = path.join(repoRootPath, cand, 'dist');
-        if (fs.existsSync(path.join(candDist, 'index.html')) && fs.existsSync(path.join(candDist, 'room.json'))) {
-          foundRooms.push({ folderName: cand, distPath: candDist });
+        if (fs.existsSync(path.join(candDist, 'index.html'))) {
+          try {
+            const meta = validateAndReadRoom(candDist, username, cand);
+            if (isDefaultStarterRoom(meta)) {
+              logWarning(`Excluding default test room "${meta.title}" by ${meta.author} in ${cand} for ${username}`);
+              continue;
+            }
+            foundRooms.push({ folderName: cand, distPath: candDist, meta });
+          } catch (valErr) {
+            logWarning(`Could not validate ${cand} for ${username}: ${valErr.message}`);
+          }
         }
       }
 
       if (foundRooms.length === 0) {
-        throw new Error(`No valid room build (index.html + room.json) found in room-1/dist/ through room-5/dist/ for ${username}`);
+        logWarning(`No custom rooms found for ${username} (only starter test room or empty directories). Skipping fork.`);
+        continue;
       }
 
       for (const roomItem of foundRooms) {
-        const meta = validateAndReadRoom(roomItem.distPath, username, roomItem.folderName);
+        const meta = roomItem.meta;
         const roomId = (foundRooms.length === 1 && (roomItem.folderName === 'room-1' || roomItem.folderName === 'room'))
           ? username
           : `${username}-${roomItem.folderName}`;
@@ -283,6 +331,25 @@ async function run() {
         }
 
         copyFolderRecursive(roomItem.distPath, targetRoomDir);
+
+        // Auto-patch missing defrag protocol for games like Refrag Monday
+        const importedIndex = path.join(targetRoomDir, 'index.html');
+        if (fs.existsSync(importedIndex)) {
+          let content = fs.readFileSync(importedIndex, 'utf8');
+          if (!content.includes('defrag:complete')) {
+            if (content.includes('Refrag Monday') || content.includes('S = "end"')) {
+              content = content.replace(
+                'function start() {',
+                `let defragReported = false;\nfunction reportDefragComplete(success, resultText) {\n  if (defragReported) return;\n  defragReported = true;\n  window.parent.postMessage({ type: 'defrag:complete', success: Boolean(success), result: String(resultText) }, '*');\n}\nwindow.addEventListener('message', (e) => {\n  if (e.data?.type === 'defrag:start') { defragReported = false; start(); }\n  if (e.data?.type === 'defrag:timeout') { reportDefragComplete(lives > 0 && wins >= 4, 'Time expired!'); }\n});\nfunction start() {\n  defragReported = false;`
+              ).replace(
+                'S = "end";',
+                'S = "end"; setTimeout(() => { reportDefragComplete(lives > 0, lives > 0 ? `You made it! Completed ${wins}/8 chores!` : `Called in sick! ${wins}/8 chores done.`); }, 1000);'
+              );
+              fs.writeFileSync(importedIndex, content, 'utf8');
+              logSuccess(`Auto-patched missing defrag:complete end-state into "${meta.title}"`);
+            }
+          }
+        }
 
         assembledRooms.push({
           id: roomId,

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Arcane Forge</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="forge-container">
+    <!-- Header -->
+    <header class="forge-header">
+      <div class="brand">
+        <span class="rune-glyph">✦</span>
+        <div class="brand-text">
+          <h1>AI ARCANE FORGE</h1>
+          <span class="subtitle">MAGIC POTION SYNTHESIZER</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <button id="guide-btn" class="guide-btn" title="View Tutorial">❓ HOW TO PLAY</button>
+        <div class="timer-badge" id="timer-badge">
+          <span class="timer-icon">⏳</span>
+          <span id="timer-display">100.0s</span>
+        </div>
+        <button id="mute-btn" class="icon-btn" title="Toggle Sound" aria-label="Toggle Sound">🔊</button>
+      </div>
+    </header>
+
+    <!-- Quick Tutorial Step Bar -->
+    <div class="quick-guide-bar">
+      <div class="guide-step step-1">
+        <span class="step-num">1</span>
+        <span class="step-text"><strong>Click Core</strong> for FLOPs</span>
+      </div>
+      <span class="guide-arrow">➔</span>
+      <div class="guide-step step-2">
+        <span class="step-num">2</span>
+        <span class="step-text"><strong>Buy Hardware</strong> to automate</span>
+      </div>
+      <span class="guide-arrow">➔</span>
+      <div class="guide-step step-3">
+        <span class="step-num">3</span>
+        <span class="step-text"><strong>Unlock Tier 1–5</strong> to Win!</span>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <main class="forge-workspace">
+      <!-- Left: Neural Core & Potion Synthesis Canvas -->
+      <section class="core-panel">
+        <div class="panel-header">
+          <span class="panel-tag">SYNTHESIS VESSEL</span>
+          <span id="tier-badge" class="tier-tag">TIER 0: RAW SLAG</span>
+        </div>
+
+        <div class="canvas-container">
+          <canvas id="potion-canvas" width="320" height="220"></canvas>
+          <div id="overclock-indicator" class="overclock-banner hidden">
+            ⚡ 3× OVERCLOCK SURGE ACTIVE ⚡
+          </div>
+        </div>
+
+        <!-- Potency Progress -->
+        <div class="potency-container">
+          <div class="potency-labels">
+            <span>POTION POTENCY (GOAL: 100%)</span>
+            <span id="potency-pct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="potency-bar" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <!-- Central Neural Core Target -->
+        <div class="neural-core-wrapper">
+          <div class="core-click-hint">👇 CLICK HERE FOR FLOPS 👇</div>
+          <button id="neural-core" class="neural-core-btn" aria-label="Pulse Neural Core">
+            <div class="core-outer-ring"></div>
+            <div class="core-inner-orb">
+              <span class="core-icon">⚛</span>
+              <span class="core-text">PULSE CORE</span>
+            </div>
+          </button>
+          <div class="compute-stats">
+            <div class="compute-val" id="compute-display">0 FLOPs</div>
+            <div class="rate-val" id="rate-display">+0.0 FLOPs/s</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Hardware Upgrades & Research Tree -->
+      <section class="tech-panel">
+        <!-- Upgrades Sub-section -->
+        <div class="sub-panel">
+          <div class="panel-header">
+            <span class="panel-tag">COMPUTE INFRASTRUCTURE</span>
+            <span class="panel-badge-info">AUTOMATE FLOPs/s</span>
+          </div>
+          <div class="upgrade-grid" id="upgrade-list">
+            <!-- Statically initialized & reactively updated in game.js -->
+          </div>
+        </div>
+
+        <!-- Research Sub-section -->
+        <div class="sub-panel">
+          <div class="panel-header">
+            <span class="panel-tag">ALCHEMICAL RESEARCH TREE</span>
+            <span class="panel-badge-goal">🏆 MAIN GOAL: CRAFT APEX ELIXIR</span>
+          </div>
+          <div class="research-list" id="research-list">
+            <!-- Statically initialized & reactively updated in game.js -->
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="forge-footer">
+      <div class="telemetry-bar">
+        <span class="telemetry-dot"></span>
+        <span id="log-text">System standby. Awaiting host initialization...</span>
+      </div>
+      <button id="abort-btn" class="abort-btn">Abort Experiment</button>
+    </footer>
+
+    <!-- Breakthrough Floating Anomaly -->
+    <div id="breakthrough-orb" class="breakthrough-orb hidden">
+      <div class="orb-glow"></div>
+      <span class="orb-icon">✦</span>
+      <span class="orb-label">BREAKTHROUGH!</span>
+    </div>
+
+    <!-- Tutorial / Mission Briefing Modal -->
+    <div id="tutorial-overlay" class="overlay hidden">
+      <div class="overlay-card tutorial-card">
+        <div class="tutorial-header">
+          <h2>✦ ALCHEMICAL FORGE MISSION BRIEFING ✦</h2>
+          <span class="tutorial-sub">HOW TO PLAY & WIN BEFORE TIME RUNS OUT</span>
+        </div>
+
+        <div class="tutorial-steps">
+          <div class="t-step">
+            <div class="t-icon">⚛️</div>
+            <div class="t-body">
+              <strong>STEP 1: PULSE THE NEURAL CORE</strong>
+              <p>Click the large central orb on the left to harvest initial compute (FLOPs).</p>
+            </div>
+          </div>
+
+          <div class="t-step">
+            <div class="t-icon">⚙️</div>
+            <div class="t-body">
+              <strong>STEP 2: BUY HARDWARE INFRASTRUCTURE</strong>
+              <p>Purchase GPU Rigs and TPU Pods on the right to automate passive FLOPs/sec generation.</p>
+            </div>
+          </div>
+
+          <div class="t-step t-goal">
+            <div class="t-icon">🏆</div>
+            <div class="t-body">
+              <strong>STEP 3: UNLOCK RESEARCH TIERS (THE GOAL!)</strong>
+              <p>Spend FLOPs on <strong>Research Tiers 1 through 5</strong>. Each tier grants +20% potion potency. Completing <strong>Tier 5: Apex Elixir</strong> wins the game!</p>
+            </div>
+          </div>
+
+          <div class="t-step">
+            <div class="t-icon">⚡</div>
+            <div class="t-body">
+              <strong>BONUS: CATCH NEURAL BREAKTHROUGHS</strong>
+              <p>Click floating golden anomalies when they appear for massive compute windfalls or 3× Overclock surges!</p>
+            </div>
+          </div>
+        </div>
+
+        <button id="close-tutorial-btn" class="action-btn-large">I UNDERSTAND — COMMENCE FORGE</button>
+      </div>
+    </div>
+
+    <!-- Standby Overlay -->
+    <div id="standby-overlay" class="overlay standby-active">
+      <div class="overlay-card">
+        <div class="standby-spinner"></div>
+        <h2>STANDBY MODE</h2>
+        <p>Waiting for host start signal ({ type: 'defrag:start' })...</p>
+        <span class="preview-badge">PREVIEW ACTIVE (CLICK TO TEST STANDALONE)</span>
+      </div>
+    </div>
+
+    <!-- Result Modal Overlay -->
+    <div id="result-overlay" class="overlay hidden">
+      <div class="overlay-card" id="result-card">
+        <h2 id="result-title">EXPERIMENT COMPLETE</h2>
+        <p id="result-desc">Synthesized the Apex Elixir!</p>
+        <div class="result-stats" id="result-stats"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./game.js"></script>
+</body>
+</html>

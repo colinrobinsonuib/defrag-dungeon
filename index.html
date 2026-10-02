@@ -5,28 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Defrag Dungeon</title>
   <link rel="stylesheet" href="./overworld/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="dark-mode">
+  <div class="cyber-grid-bg"></div>
+  <div class="ambient-glow" id="ambient-glow"></div>
 
-  <!-- Barebones Header -->
+  <!-- Cyber Header -->
   <header>
-    <h1>Defrag Dungeon</h1>
+    <div class="logo-area">
+      <span class="logo-icon">👾</span>
+      <div class="logo-text-group">
+        <h1>DEFRAG DUNGEON</h1>
+        <span class="sub-badge">SYSTEM RECOVERY OVERWORLD</span>
+      </div>
+    </div>
     <div class="header-controls">
-      <span id="progress-indicator">Room 1 of 1</span>
+      <span id="progress-indicator">Sector 1 of 5</span>
+      <div class="nav-btn-group">
+        <button id="prev-nav-btn" class="icon-btn" title="Previous Sector (←)">◀</button>
+        <button id="next-nav-btn" class="icon-btn" title="Next Sector (→)">▶</button>
+      </div>
+      <button id="shuffle-btn">Shuffle</button>
       <button id="reset-btn">Reset</button>
     </div>
   </header>
 
-  <!-- Sequential Room List -->
-  <main id="room-list">
-    <!-- Generated dynamically -->
-  </main>
+  <!-- Interactive 3D Corridor Stage -->
+  <div class="dungeon-stage" id="dungeon-stage">
+    <!-- Stage Arrows -->
+    <button class="stage-arrow arrow-left" id="stage-arrow-left" aria-label="Previous Sector">
+      <span class="arrow-icon">◀</span>
+    </button>
+    <button class="stage-arrow arrow-right" id="stage-arrow-right" aria-label="Next Sector">
+      <span class="arrow-icon">▶</span>
+    </button>
+
+    <!-- Horizontal Carousel Viewport -->
+    <div class="track-viewport" id="track-viewport">
+      <main id="room-list" class="room-track">
+        <!-- Rendered dynamically -->
+      </main>
+    </div>
+
+    <!-- Sector Track Navigation Indicator -->
+    <div class="track-dots" id="track-dots">
+      <!-- Generated dynamically -->
+    </div>
+  </div>
 
   <!-- Completion Summary -->
   <div id="dungeon-summary" class="dungeon-summary">
-    <h2>All Rooms Completed</h2>
-    <p id="summary-text" style="margin: 10px 0;"></p>
-    <button id="replay-btn">Replay</button>
+    <div class="summary-card">
+      <div class="summary-badge">MISSION COMPLETE</div>
+      <h2>ALL SECTORS DEFRAGMENTED</h2>
+      <p id="summary-text" style="margin: 12px 0;"></p>
+      <button id="replay-btn" class="glow-btn">Replay Dungeon Run</button>
+    </div>
   </div>
 
   <!-- Room Modal Overlay -->

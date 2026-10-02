@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Refrag Monday</title>
+    <style>
+      :root {
+        --pg: #d3dac8;
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --pg: #1c2624;
+        }
+      }
+      :root[data-theme="dark"] {
+        --pg: #1c2624;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        background: var(--pg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      canvas {
+        height: 100%;
+        max-width: 100%;
+        aspect-ratio: 2/3;
+        object-fit: contain;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c" width="400" height="600"></canvas>
+    <script>
+      const c = document.getElementById("c"),
+        x = c.getContext("2d"),
+        W = 400,
+        H = 600,
+        INK = "#2b2118",
+        SK = "#f0c08f";
+      let P = { x: 200, y: 300, d: 0 },
+        T = 0,
+        S = "title",
+        R = 0,
+        lives = 4,
+        wins = 0,
+        G,
+        tm = 0,
+        tmax = 1,
+        st = 0,
+        res = 0,
+        K = {},
+        ac;
+      const rnd = (a, b) => a + Math.random() * (b - a),
+        lvl = () => 1 + R * 0.12;
+      const sh = (a) => ({
+        x:
+          a *
+          (Math.sin(T * 31) +
+            0.6 * Math.sin(T * 17.3 + 2) +
+            0.4 * Math.sin(T * 53)),
+        y: a * (Math.cos(T * 29) + 0.6 * Math.sin(T * 19 + 1)),
+      });
+      function bp(f, d = 0.12) {
+        try {
+          ac = ac || new AudioContext();
+          const o = ac.createOscillator(),
+            g = ac.createGain();
+          o.type = "square";
+          o.frequency.value = f;
+          g.gain.value = 0.05;
+          o.connect(g);
+          g.connect(ac.destination);
+          o.start();
+          o.stop(ac.currentTime + d);
+        } catch (e) {}
+      }
+      function pt(e) {
+        const b = c.getBoundingClientRect();
+        P.x = ((e.clientX - b.left) * W) / b.width;
+        P.y = ((e.clientY - b.top) * H) / b.height;
+      }
+      function press() {
+        if (S == "title" || (S == "end" && st <= 0)) start();
+        else if (S == "play" && G.tap) {
+          G.tap();
+          bp(300, 0.04);
+        }
+      }
+      c.addEventListener("pointerdown", (e) => {
+        pt(e);
+        P.d = 1;
+        press();
+      });
+      c.addEventListener("pointermove", pt);
+      addEventListener("pointerup", () => (P.d = 0));
+      addEventListener("keydown", (e) => {
+        K[e.key.toLowerCase()] = 1;
+        if (e.key == " ") {
+          e.preventDefault();
+          press();
+        }
+      });
+      addEventListener("keyup", (e) => (K[e.key.toLowerCase()] = 0));
+      function B(X, Y, w, h, f) {
+        x.lineWidth = 5;
+        x.strokeStyle = INK;
+        x.fillStyle = f;
+        x.fillRect(X, Y, w, h);
+        x.strokeRect(X, Y, w, h);
+      }
+      function C(X, Y, r, f, rx = r, ry = r) {
+        x.lineWidth = 5;
+        x.strokeStyle = INK;
+        x.fillStyle = f;
+        x.beginPath();
+        x.ellipse(X, Y, rx, ry, 0, 0, 7);
+        x.fill();
+        x.stroke();
+      }
+      function tx(s, X, Y, sz, col = "#fff", gh) {
+        x.font = `900 ${sz}px Impact,'Arial Black',sans-serif`;
+        x.textAlign = "center";
+        x.lineWidth = sz / 6;
+        x.strokeStyle = INK;
+        x.lineJoin = "round";
+        if (gh) {
+          const o = 7 * Math.sin(T * 5);
+          x.globalAlpha = 0.35;
+          x.strokeText(s, X + o, Y);
+          x.fillStyle = col;
+          x.fillText(s, X + o, Y);
+          x.globalAlpha = 1;
+        }
+        x.strokeText(s, X, Y);
+        x.fillStyle = col;
+        x.fillText(s, X, Y);
+      }
+      function face(cx, cy, r, m = 0, lid = 0.45) {
+        x.fillStyle = "#4a3020";
+        x.lineWidth = 5;
+        x.strokeStyle = INK;
+        for (let i = -4; i <= 4; i++) {
+          x.beginPath();
+          x.moveTo(cx + i * r * 0.2 - r * 0.13, cy - r * 0.8);
+          x.lineTo(
+            cx + i * r * 0.25 + (i % 2 ? 12 : -12),
+            cy - r * 1.28 - (i % 3) * r * 0.1,
+          );
+          x.lineTo(cx + i * r * 0.2 + r * 0.13, cy - r * 0.8);
+          x.fill();
+          x.stroke();
+        }
+        const sk = m == 2 ? "#a9c36e" : SK;
+        C(cx, cy, r, sk, r * 0.85, r);
+        for (const s of [-1, 1]) {
+          const ex = cx + s * r * 0.36,
+            ey = cy - r * 0.1,
+            rx = r * 0.2,
+            ry = r * 0.14;
+          x.save();
+          x.beginPath();
+          x.ellipse(ex, ey, rx, ry, 0, 0, 7);
+          x.clip();
+          x.fillStyle = "#fff";
+          x.fillRect(ex - rx, ey - ry, rx * 2, ry * 2);
+          x.fillStyle = "#d33";
+          x.fillRect(ex - rx, ey + ry * 0.5, rx * 2, 3);
+          x.fillStyle = INK;
+          x.beginPath();
+          x.arc(ex + Math.sin(T * 2) * 3, ey + 2, ry * 0.5, 0, 7);
+          x.fill();
+          const l = m == 1 ? 0.85 : lid;
+          x.fillStyle = sk;
+          x.fillRect(ex - rx, ey - ry, rx * 2, ry * 2 * (1 - l));
+          x.restore();
+          x.strokeStyle = INK;
+          x.lineWidth = 4;
+          x.beginPath();
+          x.ellipse(ex, ey, rx, ry, 0, 0, 7);
+          x.stroke();
+          x.strokeStyle = "#7a5a8a";
+          x.beginPath();
+          x.ellipse(
+            ex,
+            ey + ry * 0.3,
+            rx * 1.1,
+            ry * 1.3,
+            0,
+            0.3,
+            Math.PI - 0.3,
+          );
+          x.stroke();
+          x.strokeStyle = INK;
+          x.beginPath();
+          x.moveTo(ex - rx, ey - ry * 1.6 + s * 3);
+          x.lineTo(ex + rx, ey - ry * 1.6 - s * 3);
+          x.stroke();
+        }
+        x.strokeStyle = INK;
+        x.lineWidth = 5;
+        x.beginPath();
+        if (m == 1) {
+          x.arc(cx, cy + r * 0.3, r * 0.25, 0.2, Math.PI - 0.2);
+        } else if (m == 2) {
+          x.ellipse(
+            cx,
+            cy + r * 0.5,
+            r * 0.2,
+            r * 0.12 + Math.abs(Math.sin(T * 8)) * 4,
+            0,
+            0,
+            7,
+          );
+        } else {
+          x.moveTo(cx - r * 0.25, cy + r * 0.5);
+          for (let i = 1; i <= 4; i++)
+            x.lineTo(
+              cx - r * 0.25 + i * r * 0.125,
+              cy + r * 0.5 + (i % 2 ? 4 : -4),
+            );
+        }
+        x.stroke();
+      }
+      const GL = [
+        {
+          v: "POUR THE COFFEE!",
+          h: "HOLD to pour, steer your shaky hand",
+          t: 7,
+          bg: "#c98f4e",
+          init() {
+            this.f = 0;
+            this.p = [];
+            this.cd = 0;
+            this.sp = [];
+          },
+          up(dt) {
+            const k = sh(34 * lvl());
+            this.sx = P.x + k.x;
+            this.sy = 190 + k.y * 0.4;
+            if (P.d) {
+              this.cd -= dt;
+              while (this.cd <= 0) {
+                this.cd += 0.03;
+                this.p.push({ x: this.sx + rnd(-6, 6), y: this.sy + 20, v: 0 });
+              }
+            }
+            this.p = this.p.filter((q) => {
+              q.v += 900 * dt;
+              q.y += q.v * dt;
+              if (q.y > 400) {
+                if (Math.abs(q.x - 200) < 46) {
+                  this.f++;
+                  return 0;
+                }
+                if (q.y > 500) {
+                  q.y = rnd(500, 520);
+                  this.sp.push(q);
+                  if (this.sp.length > 250) this.sp.shift();
+                  return 0;
+                }
+              }
+              return 1;
+            });
+            if (this.f >= 45) return 1;
+          },
+          dr() {
+            B(0, 510, W, 90, "#7a4a2c");
+            B(120, 330, 160, 180, "#4a4a5c");
+            B(105, 318, 190, 42, "#d63a2a");
+            B(165, 455, 70, 55, "#bfe3f0");
+            x.save();
+            x.beginPath();
+            x.moveTo(145, 395);
+            x.lineTo(255, 395);
+            x.lineTo(225, 450);
+            x.lineTo(175, 450);
+            x.closePath();
+            x.fillStyle = "#f4f0e0";
+            x.fill();
+            x.clip();
+            x.fillStyle = "#3a2415";
+            const h = (this.f / 45) * 55;
+            x.fillRect(140, 450 - h, 120, h);
+            x.restore();
+            x.lineWidth = 5;
+            x.strokeStyle = INK;
+            x.beginPath();
+            x.moveTo(145, 395);
+            x.lineTo(255, 395);
+            x.lineTo(225, 450);
+            x.lineTo(175, 450);
+            x.closePath();
+            x.stroke();
+            x.fillStyle = "#3a2415";
+            for (const q of this.p.concat(this.sp)) x.fillRect(q.x, q.y, 6, 6);
+            x.lineWidth = 9;
+            x.strokeStyle = INK;
+            x.beginPath();
+            x.moveTo(this.sx + 20, this.sy - 4);
+            x.lineTo(this.sx + 75, this.sy - 44);
+            x.stroke();
+            C(this.sx, this.sy, 26, "#c4c8d0", 26, 13);
+            C(this.sx, this.sy - 2, 19, "#3a2415", 19, 7);
+            tx(Math.floor((this.f / 45) * 100) + "%", 200, 285, 34);
+          },
+        },
+        {
+          v: "WAKE UP!",
+          h: "TAP / SPACE fast to lift the lids",
+          t: 6,
+          bg: "#8fb2dc",
+          init() {
+            this.o = 0.15;
+            this.h = 0;
+          },
+          tap() {
+            this.o = Math.min(1, this.o + 0.15);
+          },
+          up(dt) {
+            this.o = Math.max(0, this.o - (0.65 + R * 0.05) * dt);
+            if (this.o > 0.7) this.h += dt;
+            if (this.h >= 1.6) return 1;
+          },
+          dr() {
+            C(200, 300, 190, SK, 190, 125);
+            x.save();
+            x.beginPath();
+            x.ellipse(200, 300, 140, 88, 0, 0, 7);
+            x.clip();
+            x.fillStyle = "#fff";
+            x.fillRect(0, 200, W, 200);
+            const ix = 200 + Math.sin(T * 2) * 12;
+            x.fillStyle = "#6a8a5a";
+            x.beginPath();
+            x.arc(ix, 300, 62, 0, 7);
+            x.fill();
+            x.fillStyle = INK;
+            x.beginPath();
+            x.arc(ix, 300, 28, 0, 7);
+            x.fill();
+            x.strokeStyle = "#d33";
+            x.lineWidth = 2;
+            for (let i = 0; i < 9; i++) {
+              x.beginPath();
+              x.moveTo(i < 5 ? 62 : 338, 255 + i * 12);
+              x.lineTo(
+                i < 5 ? 130 + i * 8 : 270 - i * 6,
+                300 + Math.sin(i) * 20,
+              );
+              x.stroke();
+            }
+            const e = 212 + (1 - this.o) * 176;
+            x.fillStyle = SK;
+            x.fillRect(0, 0, W, e);
+            x.strokeStyle = INK;
+            x.lineWidth = 7;
+            x.beginPath();
+            x.moveTo(50, e);
+            x.quadraticCurveTo(200, e + 16, 350, e);
+            x.stroke();
+            x.restore();
+            x.strokeStyle = INK;
+            x.lineWidth = 6;
+            x.beginPath();
+            x.ellipse(200, 300, 140, 88, 0, 0, 7);
+            x.stroke();
+            x.strokeStyle = "#7a5a8a";
+            x.lineWidth = 12;
+            x.beginPath();
+            x.ellipse(200, 300, 152, 102, 0, 0.25, Math.PI - 0.25);
+            x.stroke();
+            x.setLineDash([9, 9]);
+            x.strokeStyle = "#1c9a5e";
+            x.lineWidth = 4;
+            x.beginPath();
+            x.moveTo(30, 265);
+            x.lineTo(370, 265);
+            x.stroke();
+            x.setLineDash([]);
+            B(60, 450, 280, 28, "#fff");
+            B(60, 450, 280 * Math.min(1, this.h / 1.6), 28, "#2bb673");
+            tx("AWAKE", 200, 510, 28);
+          },
+        },
+        {
+          v: "SHAVE!",
+          h: "HOLD & scrub the stubble, avoid the eyes",
+          t: 7,
+          bg: "#88c9c0",
+          init() {
+            this.d = [];
+            this.ouch = 0;
+            while (this.d.length < 110) {
+              const px = rnd(120, 280),
+                py = rnd(305, 415);
+              if (((px - 200) / 78) ** 2 + ((py - 362) / 52) ** 2 < 1)
+                this.d.push({ x: px, y: py, a: 1 });
+            }
+          },
+          up(dt) {
+            const k = sh(28 * lvl());
+            this.rx = P.x + k.x;
+            this.ry = P.y + k.y;
+            this.ouch -= dt;
+            if (P.d) {
+              if (this.ry < 295) {
+                tm -= dt * 1.2;
+                this.ouch = 0.3;
+              }
+              this.d.forEach((q) => {
+                if (q.a && Math.hypot(q.x - this.rx, q.y - this.ry) < 26)
+                  q.a = 0;
+              });
+            }
+            if (this.d.filter((q) => q.a).length <= 8) return 1;
+          },
+          dr() {
+            face(200, 300, 120, 0, 0.4);
+            x.fillStyle = INK;
+            this.d.forEach((q) => q.a && x.fillRect(q.x, q.y, 3, 7));
+            B(this.rx - 28, this.ry - 15, 56, 30, "#d4d8e0");
+            B(this.rx - 9, this.ry + 15, 18, 64, "#2f6fd0");
+            if (this.ouch > 0) tx("OUCH!", 200, 150, 60, "#ff4a3a");
+          },
+        },
+        {
+          v: "DON'T SNOOZE!",
+          h: "TAP the OFF button 3 times",
+          t: 6,
+          bg: "#e79aa0",
+          init() {
+            this.n = 0;
+            this.f = 0;
+          },
+          pos() {
+            const k = sh(10 * lvl());
+            return {
+              x: 200 + 105 * Math.sin(T * (2.2 + R * 0.15)) + k.x,
+              y: 270 + 65 * Math.sin(T * (3.1 + R * 0.1) + 1) + k.y,
+            };
+          },
+          tap() {
+            const p = this.pos();
+            if (P.y > 475 && P.y < 555 && P.x > 105 && P.x < 295) {
+              this.lose = 1;
+              return;
+            }
+            if (Math.hypot(P.x - p.x, P.y - p.y) < 36) this.n++;
+            else this.f = 0.25;
+          },
+          up(dt) {
+            this.f = Math.max(0, this.f - dt);
+            if (this.n >= 3) return 1;
+            if (this.lose) return -1;
+          },
+          dr() {
+            x.save();
+            x.translate(Math.sin(T * 70) * 4, 0);
+            C(110, 135, 34, "#e8c030");
+            C(290, 135, 34, "#e8c030");
+            C(200, 270, 150, "#d63a3a");
+            C(200, 270, 122, "#fff6df");
+            tx("07:00", 200, 290, 64, "#2b2118");
+            const p = this.pos();
+            C(p.x, p.y, 36, "#2f6fd0");
+            tx("OFF", p.x, p.y + 10, 26);
+            x.restore();
+            tx("●".repeat(this.n) + "○".repeat(3 - this.n), 200, 450, 34);
+            B(105, 480, 190, 72, "#2bb673");
+            tx("SNOOZE", 200, 526, 40);
+            if (this.f > 0) {
+              x.fillStyle = "rgba(255,40,40,.35)";
+              x.fillRect(0, 0, W, H);
+            }
+          },
+        },
+        {
+          v: "STAND UP!",
+          h: "TAP left / right side (or arrow keys)",
+          t: 6,
+          bg: "#b7d98f",
+          surv: 1,
+          init() {
+            this.a = rnd(-0.2, 0.2);
+            this.w = 0;
+          },
+          up(dt) {
+            const d =
+              (K.arrowright || K.d || (P.d && P.x >= 200) ? 1 : 0) -
+              (K.arrowleft || K.a || (P.d && P.x < 200) ? 1 : 0);
+            this.w +=
+              (this.a * 2.4 * lvl() +
+                Math.sin(T * 3.7) * 0.9 * lvl() +
+                d * 4.5) *
+              dt;
+            this.w *= 0.995;
+            this.a += this.w * dt;
+            if (Math.abs(this.a) > 1) return -1;
+          },
+          dr() {
+            B(0, 520, W, 80, "#7b6a8a");
+            B(0, 500, W, 24, "#e9e4f0");
+            x.save();
+            x.translate(200, 515);
+            x.rotate(this.a * 0.9);
+            B(-34, -250, 68, 240, "#5a6fb5");
+            B(-34, -110, 68, 14, "#fff");
+            x.restore();
+            face(
+              200 + Math.sin(this.a * 0.9) * 285,
+              515 - Math.cos(this.a * 0.9) * 285,
+              46,
+              Math.abs(this.a) > 0.6 ? 2 : 0,
+              0.35,
+            );
+            if (Math.abs(this.a) > 0.6) {
+              x.fillStyle = "rgba(255,40,40,.25)";
+              x.fillRect(0, 0, W, H);
+            }
+          },
+        },
+      ];
+      const order = [3, 1, 4, 0, 2, 4, 0, 2];
+      let defragReported = false;
+function reportDefragComplete(success, resultText) {
+  if (defragReported) return;
+  defragReported = true;
+  window.parent.postMessage({ type: 'defrag:complete', success: Boolean(success), result: String(resultText) }, '*');
+}
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'defrag:start') { defragReported = false; start(); }
+  if (e.data?.type === 'defrag:timeout') { reportDefragComplete(lives > 0 && wins >= 4, 'Time expired!'); }
+});
+function start() {
+  defragReported = false;
+        R = 0;
+        lives = 4;
+        wins = 0;
+        nx();
+      }
+      function nx() {
+        if (R >= 8 || lives <= 0) {
+          S = "end"; setTimeout(() => { reportDefragComplete(lives > 0, lives > 0 ? `You made it! Completed ${wins}/8 chores!` : `Called in sick! ${wins}/8 chores done.`); }, 1000);
+          st = 0.7;
+          bp(lives > 0 ? 880 : 120, 0.4);
+          return;
+        }
+        G = GL[order[R]];
+        G.lose = 0;
+        G.init();
+        tmax = tm = G.t - R * 0.2;
+        S = "intro";
+        st = 1.1;
+      }
+      function fin(w) {
+        res = w;
+        if (w) wins++;
+        else lives--;
+        S = "res";
+        st = 1.1;
+        bp(w ? 700 : 140, w ? 0.15 : 0.3);
+      }
+      function update(dt) {
+        if (S == "intro") {
+          st -= dt;
+          if (st <= 0) S = "play";
+        } else if (S == "play") {
+          tm -= dt;
+          const r = G.up(dt);
+          if (r == 1) fin(1);
+          else if (r == -1) fin(0);
+          else if (tm <= 0) fin(!!G.surv);
+        } else if (S == "res") {
+          st -= dt;
+          if (st <= 0) {
+            R++;
+            nx();
+          }
+        } else if (S == "end") st -= dt;
+      }
+      function hud() {
+        B(-5, -5, W + 10, 58, "#2b2118");
+        const m = Math.floor(R * 7.5);
+        x.textAlign = "left";
+        x.font = "900 30px Impact,'Arial Black'";
+        x.fillStyle = "#ffe14a";
+        x.fillText(
+          `${7 + Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`,
+          14,
+          36,
+        );
+        for (let i = 0; i < 4; i++) {
+          x.font = "28px sans-serif";
+          x.fillStyle = i < lives ? "#ff4a5a" : "#555";
+          x.textAlign = "center";
+          x.fillText("♥", 290 + i * 30, 36);
+        }
+        if (S == "play") {
+          x.fillStyle = "#ffe14a";
+          x.fillRect(0, 48, W * Math.max(0, tm / tmax), 8);
+        }
+      }
+      function draw() {
+        const bg =
+          S == "title"
+            ? "#c9d86a"
+            : S == "end"
+              ? lives > 0
+                ? "#7fd87f"
+                : "#a9c36e"
+              : S == "res"
+                ? res
+                  ? "#7fd87f"
+                  : "#b58ad6"
+                : G.bg;
+        x.fillStyle = bg;
+        x.fillRect(0, 0, W, H);
+        x.save();
+        x.translate(Math.sin(T * 1.3) * 3, Math.sin(T * 1.7) * 3);
+        if (S == "title") {
+          face(200, 380, 110, 0, 0.3);
+          tx("REFRAG", 200, 130, 92, "#fff", 1);
+          tx("MONDAY", 200, 215, 92, "#ffe14a", 1);
+          tx("Hungover. Shaky. Late.", 200, 500, 26);
+          if (Math.sin(T * 6) > -0.3)
+            tx("TAP TO START", 200, 560, 36, "#ff5a4a");
+        } else if (S == "end") {
+          const ok = lives > 0;
+          face(200, 330, 120, ok ? 1 : 2, ok ? 0.9 : 0.3);
+          tx(
+            ok ? "YOU MADE IT!" : "CALLED IN SICK",
+            200,
+            120,
+            ok ? 62 : 54,
+            "#fff",
+            1,
+          );
+          tx(`${wins}/8 chores done`, 200, 520, 34);
+          if (st <= 0) tx("TAP TO RETRY", 200, 570, 30, "#ffe14a");
+        } else if (S == "intro") {
+          tx(G.v, 200, 280, G.v.length > 12 ? 50 : 70, "#fff", 1);
+          tx(G.h, 200, 340, 20, "#ffe14a");
+          tx(`Round ${R + 1}/8`, 200, 560, 26);
+        } else if (S == "play") G.dr();
+        else {
+          face(200, 320, 120, res ? 1 : 2, res ? 0.9 : 0.3);
+          tx(
+            res ? "NICE!" : "BLEGH...",
+            200,
+            150,
+            80,
+            res ? "#fff" : "#e9ff9a",
+            1,
+          );
+        }
+        if (S != "title" && S != "end") hud();
+        x.restore();
+      }
+      let last = 0;
+      function loop(ts) {
+        const dt = Math.min(0.05, (ts - last) / 1000 || 0);
+        last = ts;
+        T += dt;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Defrag Dungeon - Test Harness ("Scott or Scot?")</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Cinzel:wght@700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #0f0e11;
+      color: #eaeaea;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Simulated Overworld Top Header */
+    .overworld-bar {
+      background: #1a171d;
+      border-bottom: 2px solid #332d3a;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+    }
+
+    .overworld-title-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge-icon {
+      font-size: 22px;
+    }
+
+    .overworld-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: #ffb703;
+      letter-spacing: 1px;
+    }
+
+    .overworld-sub {
+      font-size: 11px;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .overworld-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .host-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      padding: 10px 18px;
+      background: #2a9d8f;
+      color: #fff;
+      border: 2px solid #52b788;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(42, 157, 143, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .host-btn:hover {
+      background: #52b788;
+      transform: translateY(-1px);
+      box-shadow: 0 0 15px rgba(82, 183, 136, 0.7);
+    }
+
+    .host-btn.danger {
+      background: #d62828;
+      border-color: #f77f00;
+    }
+
+    .host-btn.danger:hover {
+      background: #e63946;
+    }
+
+    .link-direct {
+      font-size: 12px;
+      color: #48cae4;
+      text-decoration: none;
+      padding: 6px 12px;
+      border: 1px solid #0077b6;
+      border-radius: 4px;
+    }
+
+    .link-direct:hover {
+      background: rgba(0, 119, 182, 0.2);
+    }
+
+    /* Communication Log Drawer */
+    .protocol-log {
+      background: #141217;
+      border-bottom: 1px solid #2a2530;
+      padding: 6px 20px;
+      font-family: monospace;
+      font-size: 11px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .log-label {
+      color: #e0a93b;
+      font-weight: bold;
+    }
+
+    .log-entry {
+      color: #a8dadc;
+    }
+
+    /* Iframe Container */
+    .iframe-wrapper {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      transition: opacity 0.4s ease;
+    }
+
+    /* Defrag Protocol: Opacity 0.2 when paused, 1.0 when started */
+    iframe.paused {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    iframe.active {
+      opacity: 1.0;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top simulated Defrag Dungeon Overworld Header -->
+  <div class="overworld-bar">
+    <div class="overworld-title-area">
+      <span class="badge-icon">👾</span>
+      <div>
+        <div class="overworld-title">DEFRAG DUNGEON — HOST TEST HARNESS</div>
+        <div class="overworld-sub">Room 1: Scott or Scot? (UiB Digital Culture)</div>
+      </div>
+    </div>
+
+    <div class="overworld-controls">
+      <button class="host-btn" id="btn-start" onclick="sendHostStart()">▶ START ROOM (defrag:start)</button>
+      <button class="host-btn danger" onclick="sendHostTimeout()">⏱ SIMULATE TIMEOUT</button>
+      <a href="./room-1/dist/index.html" class="link-direct" target="_blank">Open Standalone ↗</a>
+    </div>
+  </div>
+
+  <!-- Realtime postMessage Protocol Tracker -->
+  <div class="protocol-log">
+    <span class="log-label">Protocol Monitor:</span>
+    <span class="log-entry" id="log-text">Iframe loaded in preview mode (opacity: 0.35). Click "START ROOM" to send defrag:start signal!</span>
+  </div>
+
+  <!-- The sandboxed minigame iframe -->
+  <div class="iframe-wrapper">
+    <iframe src="./room-1/dist/index.html" id="game-frame" class="paused"></iframe>
+  </div>
+
+  <script>
+    const iframe = document.getElementById('game-frame');
+    const logText = document.getElementById('log-text');
+    const startBtn = document.getElementById('btn-start');
+
+    function log(msg) {
+      logText.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    }
+
+    // 1. Simulate Host Sending defrag:start
+    function sendHostStart() {
+      iframe.className = 'active';
+      iframe.contentWindow.postMessage({ type: 'defrag:start' }, '*');
+      log("Sent '{ type: \"defrag:start\" }' -> Iframe activated at 100% opacity, 60s timer started!");
+      startBtn.textContent = "🔄 RESTART ROOM";
+    }
+
+    // 2. Simulate Host Sending defrag:timeout
+    function sendHostTimeout() {
+      iframe.contentWindow.postMessage({ type: 'defrag:timeout' }, '*');
+      log("Sent '{ type: \"defrag:timeout\" }' -> Triggered 5s grace period timeout!");
+    }
+
+    // 3. Listen for defrag:complete from the room
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data) return;
+
+      if (data.type === 'defrag:complete') {
+        const status = data.success ? 'VICTORY' : 'DEFEAT';
+        log(`Received 'defrag:complete' from Room! Result: [${status}] "${data.result}"`);
+        alert(`DUNGEON OVERWORLD NOTIFICATION:\n\nRoom 1 completed!\nSuccess: ${data.success}\nSummary: ${data.result}`);
+      }
+    });
+  </script>
+
+</body>
+</html>

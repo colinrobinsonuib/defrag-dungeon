@@ -1,10 +1,66 @@
 [
   {
-    "id": "starter-room",
-    "title": "Sector 07: Memory Matrix",
-    "author": "Ada Lovelace",
+    "id": "colin-room-1",
+    "title": "Grid Eclipse",
+    "author": "Ola",
+    "color": "#ff4a08",
+    "description": "Slip between scanning beams and collect glowing circuit nodes before the signal collapses!",
+    "path": "rooms/colin-room-1/index.html"
+  },
+  {
+    "id": "colin-room-2",
+    "title": "AI Arcane Forge",
+    "author": "Colin",
+    "color": "#10b981",
+    "description": "Scale up magical AI compute infrastructure and synthesize the legendary Apex Elixir before time expires!",
+    "path": "rooms/colin-room-2/index.html"
+  },
+  {
+    "id": "tanketom-room-1",
+    "title": "Defrag Grenade",
+    "author": "Andreas",
+    "color": "#008080",
+    "description": "Lob defrag grenades across a fragmented hard-drive landscape until every sector is sorted.",
+    "path": "rooms/tanketom-room-1/index.html"
+  },
+  {
+    "id": "tanketom-room-2",
+    "title": "Super Stretchy 64",
+    "author": "Andreas",
+    "color": "#e52521",
+    "description": "Grab the professor's low-poly face and stretch each feature into a power star.",
+    "path": "rooms/tanketom-room-2/index.html"
+  },
+  {
+    "id": "tanketom-room-3",
+    "title": "The Crow's Due",
+    "author": "Andreas",
+    "color": "#2f3b4a",
+    "description": "Find three bright things in the storm-dark forest, and the crow will tell your fortune.",
+    "path": "rooms/tanketom-room-3/index.html"
+  },
+  {
+    "id": "tanketom-room-4",
+    "title": "Jhave's Poetry Slam",
+    "author": "Andreas",
+    "color": "#f5a300",
+    "description": "Click lines from Jhave's own writing to perform a poem at open mic night. The crowd hisses or claps; you win anyway.",
+    "path": "rooms/tanketom-room-4/index.html"
+  },
+  {
+    "id": "vokabelsalat-room-2",
+    "title": "Refrag Monday",
+    "author": "vokabelsalat",
+    "color": "#10b981",
+    "description": "",
+    "path": "rooms/vokabelsalat-room-2/index.html"
+  },
+  {
+    "id": "preemcast-source",
+    "title": "Scott or Scot?",
+    "author": "Jack",
     "color": "#e11d48",
-    "path": "room-1/dist/index.html",
-    "description": "Defragment the corrupted memory cluster by linking data blocks in correct numerical sequence!"
+    "description": "Defragment the corrupted memory cluster by linking data blocks in correct numerical sequence!",
+    "path": "rooms/preemcast-source/index.html"
   }
 ]
